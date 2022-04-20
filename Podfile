@@ -6,7 +6,8 @@ target 'CNTIOSBootstrapApp' do
   use_frameworks!
 
   # Pods for CNTIOSBootstrapApp
-  pod 'SwiftGen', '~> 6.5.1'
+  #pod 'SwiftGen', '~> 6.5.1'
+  pod 'R.swift', '~> 6.1.0'
 
   post_install do |installer|
     installer.pods_project.build_configurations.each do |config|

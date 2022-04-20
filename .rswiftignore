@@ -1,0 +1,5 @@
+# add ignored files here...
+# explicitly included file with `!`
+# reference: https://github.com/mac-cain13/R.swift/blob/master/Documentation/Ignoring.md#only-run-specific-generators-exclude-rsomething
+
+*.yml

@@ -24,3 +24,19 @@ protocol APIRequestProtocol: APIRepositoryProtocol {
     var interceptor: RequestInterceptor? { get }
     var requestModifier: Session.RequestModifier? { get }
 }
+
+protocol APIRequestProtocol2: APIRepositoryProtocol {
+    /// Format: Environment.API_URL
+    var baseURL: URL { get }
+    /// Format: "/url-path"
+    var path: String { get }
+    /// Format: baseURL.appendingPathComponent(path)
+    var fullURL: URL { get }
+    var method: APIHTTPMethod { get }
+    var headers: [APIHTTPHeaders]? { get }
+    var queryParameters: Parameters? { get }
+    var parameters: Parameters? { get }
+    var encoding: ParameterEncoding { get }
+    var interceptor: RequestInterceptor? { get }
+    var requestModifier: Session.RequestModifier? { get }
+}

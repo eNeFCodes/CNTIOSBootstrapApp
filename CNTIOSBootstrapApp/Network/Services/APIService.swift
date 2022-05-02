@@ -23,41 +23,37 @@ class APIService {
                                                              autoreleaseFrequency: .workItem,
                                                              target: .global())
 
-    func request<Request>(api: Request) -> AnyPublisher<APIResponse, Never> where Request: APIRequestProtocol {
+    private func processRequest<Request>(api: Request) async throws -> (Data, URLResponse) where Request: APIRequestProtocol {
+        var request = URLRequest(url: api.fullURL,
+                                         cachePolicy: .reloadRevalidatingCacheData,
+                                         timeoutInterval: TimeInterval(500))
+        request.httpMethod = api.method.rawValue
+
+        if let allHeaders = api.headers?.all as? [String : String] {
+            request.allHTTPHeaderFields = allHeaders
+        }
+
+        let response = try await URLSession.shared.data(for: request)
+        return response
+    }
+
+    func request<Request>(api: Request) async -> AnyPublisher<APIResponse, Never> where Request: APIRequestProtocol {
         // check internet and send internet error
-
         let publisher = PassthroughSubject<APIResponse, Never>()
-        AF.request(api.fullURL,
-                   method: api.method,
-                   parameters: api.parameters,
-                   encoding: api.encoding,
-                   headers: api.headers,
-                   interceptor: api.interceptor,
-                   requestModifier: api.requestModifier)
-            .response(queue: APIService.NetworkRequestQueue) { [weak self] response in
-                guard let _ = self else { return }
-                guard let data = response.data else {
-                    APIService.NetworkRequestCompletionQueue.async {
-                        if let error = response.error {
-                            publisher.send(.error(error: .error(error: error)))
-                        } else {
-                            publisher.send(.error(error: .unknown))
-                        }
-                        publisher.send(completion: .finished)
-                    }
-                    return
-                }
 
-                APIService.NetworkRequestCompletionQueue.async {
-                    api.responseProcessor(api: api, publisher: publisher, data: data, shouldFinishImmediately: true)
-                }
-            }
+        do {
+            let (data, _) = try await processRequest(api: api)
+            api.responseProcessor(api: api, publisher: publisher, data: data, shouldFinishImmediately: true)
+        } catch {
+            publisher.send(.error(error: .unknown))
+            publisher.send(completion: .finished)
+        }
 
         return publisher.eraseToAnyPublisher()
     }
 
     // use for multiple request instance - ignores request order
-    func request<Request>(apis: [Request]) -> AnyPublisher<APIResponse, Never> where Request: APIRequestProtocol {
+    func request<Request>(apis: [Request]) async -> AnyPublisher<APIResponse, Never> where Request: APIRequestProtocol {
         // check internet and send internet error
 
         let group = DispatchGroup()
@@ -65,32 +61,15 @@ class APIService {
 
         for api in apis {
             group.enter() // send enter dispatch
-            AF.request(api.fullURL,
-                       method: api.method,
-                       parameters: api.parameters,
-                       encoding: api.encoding,
-                       headers: api.headers,
-                       interceptor: api.interceptor,
-                       requestModifier: api.requestModifier)
-                .response(queue: APIService.NetworkRequestQueue) { [weak self] response in
-                    guard let _ = self else { return }
-                    guard let data = response.data else {
-                        APIService.NetworkRequestCompletionQueue.async {
-                            if let error = response.error {
-                                publisher.send(.error(error: .error(error: error)))
-                            } else {
-                                publisher.send(.error(error: .unknown))
-                            }
-                            group.leave() // send leave dispatch
-                        }
-                        return
-                    }
+            async let response = processRequest(api: api)
 
-                    APIService.NetworkRequestCompletionQueue.async {
-                        api.responseProcessor(api: api, publisher: publisher, data: data, shouldFinishImmediately: false)
-                        group.leave() // send leave dispatch
-                    }
-                }
+            do {
+                let data = try await response.0
+                api.responseProcessor(api: api, publisher: publisher, data: data, shouldFinishImmediately: false)
+                group.leave()
+            } catch {
+                group.leave()
+            }
         }
 
         group.notify(queue: APIService.NetworkRequestCompletionQueue) {

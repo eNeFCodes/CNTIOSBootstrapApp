@@ -37,11 +37,11 @@ extension RandomImageAPI: APIRequestProtocol {
         baseURL.appendingPathComponent(path)
     }
 
-    var method: HTTPMethod {
+    var method: APIHTTPMethod {
         .get
     }
 
-    var headers: HTTPHeaders? {
+    var headers: APIHTTPHeaders? {
         nil
     }
 
@@ -50,18 +50,6 @@ extension RandomImageAPI: APIRequestProtocol {
     }
 
     var parameters: Parameters? {
-        nil
-    }
-
-    var encoding: ParameterEncoding {
-        URLEncoding.default
-    }
-
-    var interceptor: RequestInterceptor? {
-        nil
-    }
-
-    var requestModifier: Session.RequestModifier? {
         nil
     }
 }

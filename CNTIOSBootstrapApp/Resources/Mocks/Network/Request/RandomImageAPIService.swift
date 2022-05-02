@@ -14,37 +14,45 @@ class RandomImageAPIService: APIService {
     private var subscriptions = Set<AnyCancellable>()
 
     func start() {
-        RandomImageAPIService.shared
-            .request(api: RandomImageAPI.imageBy1000)
-            .sink(receiveCompletion: { c in
-                print("completion: ", c)
-            }, receiveValue: { result in
-                switch result {
-                case .success(let data):
-                    if let image = data as? RandomImage {
-                        print("message: ", image.message)
+        Task {
+            let publisher = await RandomImageAPIService.shared
+                .request(api: RandomImageAPI.imageBy1000)
+
+            publisher
+                .sink(receiveCompletion: { c in
+                    print("completion: ", c)
+                }, receiveValue: { result in
+                    switch result {
+                    case .success(let data):
+                        if let image = data as? RandomImage {
+                            print("message: ", image.message)
+                        }
+                    default: break
                     }
-                default: break
-                }
-            })
-            .store(in: &subscriptions)
+                })
+                .store(in: &subscriptions)
+        }
     }
 
     func startMultiple() {
-        RandomImageAPIService.shared
-            .request(apis: [RandomImageAPI.imageBy2000, RandomImageAPI.imageBy3000])
-            .sink(receiveCompletion: { c in
-                print("multile completion: ", c)
-            }, receiveValue: { result in
-                switch result {
-                case .success(let data):
-                    if let image = data as? RandomImage {
-                        print("multile message: ", image.message)
+        Task {
+            let publisher = await RandomImageAPIService.shared
+                .request(apis: [RandomImageAPI.imageBy2000, RandomImageAPI.imageBy3000])
+
+            publisher
+                .sink(receiveCompletion: { c in
+                    print("multile completion: ", c)
+                }, receiveValue: { result in
+                    switch result {
+                    case .success(let data):
+                        if let image = data as? RandomImage {
+                            print("multile message: ", image.message)
+                        }
+                    default: break
                     }
-                default: break
-                }
-            })
-            .store(in: &subscriptions)
+                })
+                .store(in: &subscriptions)
+        }
     }
 }
 
